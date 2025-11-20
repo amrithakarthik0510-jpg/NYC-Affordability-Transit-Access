@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NYC Housing Affordability & Transit Access</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+        #map {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #1e293b 0%, #0f172a 100%);
+        }
+        .borough {
+            stroke: #334155;
+            stroke-width: 1.5;
+            fill: #1e293b;
+            transition: all 0.2s ease;
+        }
+        .borough:hover {
+            stroke-width: 2;
+            filter: brightness(1.15);
+        }
+        .borough-label {
+            font-size: 14px;
+            font-weight: 600;
+            fill: #94a3b8;
+            fill-opacity: 0.6;
+            text-anchor: middle;
+            pointer-events: none;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .subway-station {
+            cursor: pointer;
+            filter: drop-shadow(0px 1px 3px rgba(0,0,0,0.5));
+            transition: all 0.15s ease;
+            stroke: white;
+            stroke-width: 1;
+        }
+        .subway-station:hover {
+            filter: drop-shadow(0px 2px 8px rgba(59, 130, 246, 0.6));
+        }
+        .subway-station.selected {
+            filter: drop-shadow(0px 0px 12px rgba(34, 197, 94, 0.8));
+            stroke-width: 2;
+        }
+        .house-point {
+            cursor: pointer;
+            transition: all 0.1s ease;
+            stroke-width: 0.5;
+            stroke: rgba(255,255,255,0.3);
+        }
+        .house-point:hover {
+            stroke: white;
+            stroke-width: 1;
+            filter: drop-shadow(0px 1px 4px rgba(0,0,0,0.8));
+        }
+        .tooltip {
+            position: fixed;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            pointer-events: none;
+            display: none;
+            font-size: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+            max-width: 280px;
+            z-index: 2000;
+            color: #e2e8f0;
+        }
+        .tooltip strong {
+            color: #93c5fd;
+        }
+        .panel {
+            position: fixed;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            z-index: 100;
+            color: #e2e8f0;
+        }
+        .panel h2, .panel h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+        .panel p {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #cbd5e1;
+            line-height: 1.4;
+        }
+        .title {
+            top: 16px;
+            left: 16px;
+            max-width: 420px;
+        }
+        .title h1 {
+            margin: 0 0 6px 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+        .controls {
+            top: 16px;
+            right: 16px;
+            width: 280px;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+        }
+        .controls-section {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+        }
+        .controls-section:last-child {
+            border-bottom: none;
+        }
+        .stats {
+            bottom: 16px;
+            left: 16px;
+            min-width: 240px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+        .stat-label {
+            color: #94a3b8;
+        }
+        .stat-value {
+            font-weight: 600;
+            color: #93c5fd;
+        }
+        .legend {
+            bottom: 16px;
+            right: 16px;
+            min-width: 260px;
+        }
+        .legend-scale {
+            display: flex;
+            height: 24px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .legend-scale-item {
+            flex: 1;
+            border-right: 1px solid rgba(0,0,0,0.2);
+        }
+        .legend-scale-item:last-child {
+            border-right: none;
+        }
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #94a3b8;
+            margin-bottom: 12px;
+        }
+        .legend-info {
+            font-size: 12px;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #0ea5e9, #10b981);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.8);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+        .range-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+        .btn {
+            width: 100%;
+            padding: 10px 12px;
+            margin: 4px 0;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            background: rgba(51, 65, 85, 0.5);
+            color: #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .btn:hover {
+            background: rgba(51, 65, 85, 0.8);
+            border-color: rgba(148, 163, 184, 0.5);
+        }
+        .btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .checkbox-label:hover {
+            color: #f1f5f9;
+        }
+        .checkbox-label input {
+            margin-right: 8px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+        .color-swatch {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 6px;
+        }
+        select, input[type="text"] {
+            width: 100%;
+            padding: 8px 10px;
+            margin: 4px 0;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            background: rgba(30, 41, 59, 0.6);
+            color: #e2e8f0;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        select:hover, input[type="text"]:hover {
+            border-color: rgba(148, 163, 184, 0.5);
+        }
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        .time-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #93c5fd;
+            text-align: center;
+            font-weight: 500;
+        }
+        .controls::-webkit-scrollbar {
+            width: 6px;
+        }
+        .controls::-webkit-scrollbar-track {
+            background: rgba(148, 163, 184, 0.1);
+            border-radius: 3px;
+        }
+        .controls::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+        }
+        .controls::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
+        }
+        @media (max-width: 768px) {
+            .controls { width: 100%; right: 0; max-width: none; }
+            .title { max-width: calc(100vw - 32px); }
+            .legend { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="tooltip"></div>
+
+    <div class="panel title">
+        <h1>🏙️ NYC Housing & Transit</h1>
+        <p>Explore housing affordability in relation to subway proximity from 2014–2024. Click any station to zoom and see nearby sales.</p>
+    </div>
+
+    <div class="panel controls">
+        <div class="controls-section">
+            <h3>Time Range</h3>
+            <div class="range-label">
+                <span>Year:</span>
+                <span id="year-display">2014</span>
+            </div>
+            <input type="range" id="year-slider" min="2014" max="2024" value="2014" step="1">
+            <div class="time-info" id="time-info">2014 • Showing all data from this year</div>
+        </div>
+
+        <div class="controls-section">
+            <h3>Distance Filter (km)</h3>
+            <div class="range-label">
+                <span>Max Distance:</span>
+                <span id="distance-display">2.0</span>
+            </div>
+            <input type="range" id="distance-slider" min="0.5" max="5" value="2.0" step="0.1">
+        </div>
+
+        <div class="controls-section">
+            <h3>Filter by Borough</h3>
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" value="Manhattan" checked>
+                    <span class="color-swatch" style="background: #ef4444;"></span>
+                    Manhattan
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" value="Brooklyn" checked>
+                    <span class="color-swatch" style="background: #3b82f6;"></span>
+                    Brooklyn
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" value="Queens" checked>
+                    <span class="color-swatch" style="background: #10b981;"></span>
+                    Queens
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" value="Bronx" checked>
+                    <span class="color-swatch" style="background: #f59e0b;"></span>
+                    Bronx
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" value="Staten Island" checked>
+                    <span class="color-swatch" style="background: #a855f7;"></span>
+                    Staten Island
+                </label>
+            </div>
+        </div>
+
+        <div class="controls-section">
+            <h3>Search Station</h3>
+            <input type="text" id="station-search" placeholder="Type station name...">
+        </div>
+
+        <div class="controls-section">
+            <h3>Display Options</h3>
+            <button class="btn" id="btn-show-all">Show All Stations</button>
+            <button class="btn" id="btn-hide-houses">Clear Selection</button>
+            <button class="btn" id="btn-download">Download CSV</button>
+        </div>
+    </div>
+
+    <div class="panel stats">
+        <h3>Statistics</h3>
+        <div class="stat-row">
+            <span class="stat-label">Total Stations:</span>
+            <span class="stat-value" id="stat-total-stations">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Visible Stations:</span>
+            <span class="stat-value" id="stat-visible-stations">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Loaded Sales:</span>
+            <span class="stat-value" id="stat-loaded-sales">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Median Price:</span>
+            <span class="stat-value" id="stat-median-price">—</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Avg $/sqft:</span>
+            <span class="stat-value" id="stat-avg-psf">—</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Price–Distance Corr:</span>
+            <span class="stat-value" id="stat-correlation">—</span>
+        </div>
+    </div>
+
+    <div class="panel legend">
+        <h3>Price Per Sq Ft</h3>
+        <div class="legend-scale" id="legend-scale"></div>
+        <div class="legend-labels">
+            <span id="legend-min">$0</span>
+            <span id="legend-mid">$500</span>
+            <span id="legend-max">$1000+</span>
+        </div>
+        <div class="legend-info">
+            <strong>Station Selection:</strong> Click any subway station to zoom and view nearby property sales within the distance filter radius, colored by price affordability.
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            defaultZoom: 60000,
+            minZoom: 15000,
+            houseRadiusBase: 3,
+            stationRadiusBase: 2.8,
+        };
+
+        let state = {
+            year: 2014,
+            maxDistance: 2.0,
+            visibleBoroughs: new Set(['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island']),
+            selectedStation: null,
+            allStations: [],
+            allHouses: null,
+            housesLoaded: false,
+            currentZoom: 1,
+        };
+
+        const boroughColors = {
+            'Manhattan': '#ef4444',
+            'Brooklyn': '#3b82f6',
+            'Queens': '#10b981',
+            'Bronx': '#f59e0b',
+            'Staten Island': '#a855f7',
+            'Unknown': '#64748b'
+        };
+
+        const affordabilityScale = d3.scaleLinear()
+            .domain([0, 500, 1000])
+            .range(['#10b981', '#f59e0b', '#ef4444'])
+            .clamp(true);
+
+        const svg = d3.select("#map")
+            .append("svg")
+            .attr("width", CONFIG.width)
+            .attr("height", CONFIG.height);
+
+        const g = svg.append("g");
+        const tooltip = d3.select(".tooltip");
+
+        const projection = d3.geoMercator()
+            .center([-73.935242, 40.730610])
+            .scale(CONFIG.defaultZoom)
+            .translate([CONFIG.width / 2, CONFIG.height / 2]);
+
+        const path = d3.geoPath().projection(projection);
+
+        const zoom = d3.zoom()
+            .scaleExtent([1, 16])
+            .on("zoom", (event) => {
+                state.currentZoom = event.transform.k;
+                g.attr("transform", event.transform);
+                const scale = state.currentZoom;
+                d3.selectAll(".subway-station")
+                    .attr("r", Math.max(CONFIG.stationRadiusBase / scale, 1));
+                d3.selectAll(".house-point")
+                    .attr("r", Math.max(CONFIG.houseRadiusBase / scale, 0.8));
+            });
+
+        svg.call(zoom);
+
+        function computeStats(houses) {
+            if (!houses || houses.length === 0) {
+                return { median: null, avgPsf: null, corr: null };
+            }
+
+            const prices = houses.map(h => h.properties.SALE_PRICE)
+                .filter(p => p && !isNaN(p))
+                .map(p => typeof p === 'string' ? parseFloat(p.replace(/[^0-9.-]/g, '')) : p)
+                .filter(p => p > 0);
+
+            if (prices.length === 0) return { median: null, avgPsf: null, corr: null };
+
+            prices.sort((a, b) => a - b);
+            const median = prices[Math.floor(prices.length / 2)];
+            const avgPsf = d3.mean(prices);
+
+            let corr = null;
+            const distances = houses.map(h => h.properties.dist_km).filter(d => d);
+            if (distances.length > 10) {
+                const meanX = d3.mean(distances);
+                const meanY = d3.mean(prices);
+                let num = 0, denomX = 0, denomY = 0;
+                for (let i = 0; i < distances.length; i++) {
+                    const dx = distances[i] - meanX;
+                    const dy = prices[i] - meanY;
+                    num += dx * dy;
+                    denomX += dx * dx;
+                    denomY += dy * dy;
+                }
+                if (denomX > 0 && denomY > 0) {
+                    corr = num / Math.sqrt(denomX * denomY);
+                }
+            }
+
+            return { median, avgPsf, corr };
+        }
+
+        function updateStats(houses) {
+            const stats = computeStats(houses);
+            d3.select("#stat-median-price").text(
+                stats.median ? '$' + Math.round(stats.median).toLocaleString() : '—'
+            );
+            d3.select("#stat-avg-psf").text(
+                stats.avgPsf ? '$' + Math.round(stats.avgPsf) : '—'
+            );
+            d3.select("#stat-correlation").text(
+                stats.corr !== null ? stats.corr.toFixed(2) : '—'
+            );
+            d3.select("#stat-loaded-sales").text(houses ? houses.length.toLocaleString() : '0');
+        }
+
+        function updateLegendScale(minVal, maxVal) {
+            const steps = 100;
+            const html = Array.from({ length: steps })
+                .map((_, i) => {
+                    const ratio = i / steps;
+                    const val = minVal + (maxVal - minVal) * ratio;
+                    const color = affordabilityScale(val);
+                    return `<div class="legend-scale-item" style="background: ${color};"></div>`;
+                })
+                .join('');
+            
+            d3.select("#legend-scale").html(html);
+            d3.select("#legend-min").text('$' + Math.round(minVal));
+            d3.select("#legend-mid").text('$' + Math.round((minVal + maxVal) / 2));
+            d3.select("#legend-max").text('$' + Math.round(maxVal) + '+');
+        }
+
+        function showHousesForStation(station, maxDistKm, selectedYear) {
+            if (!station || !state.allHouses) {
+                d3.select(".house-layer").selectAll("circle").remove();
+                updateStats([]);
+                return;
+            }
+
+            const stationName = station.properties.name;
+            const nearby = state.allHouses.filter(h => {
+                const p = h.properties;
+                if (p.nearest_station !== stationName) return false;
+                if (p.dist_km == null || p.dist_km > maxDistKm) return false;
+                if (selectedYear && p.SALE_YEAR !== selectedYear) return false;
+                return state.visibleBoroughs.has(p.borough || "Unknown");
+            });
+
+            updateStats(nearby);
+
+            const prices = nearby.map(h => {
+                const p = h.properties.SALE_PRICE;
+                return typeof p === 'string' ? parseFloat(p.replace(/[^0-9.-]/g, '')) : p;
+            }).filter(p => p && p > 0);
+
+            const minPrice = prices.length > 0 ? d3.min(prices) : 0;
+            const maxPrice = prices.length > 0 ? d3.max(prices) : 1000;
+            updateLegendScale(minPrice, maxPrice);
+
+            const houseLayer = d3.select(".house-layer");
+            houseLayer.selectAll("circle").remove();
+
+            houseLayer.selectAll("circle")
+                .data(nearby)
+                .join("circle")
+                .attr("class", "house-point")
+                .attr("cx", d => projection(d.geometry.coordinates)[0])
+                .attr("cy", d => projection(d.geometry.coordinates)[1])
+                .attr("r", Math.max(CONFIG.houseRadiusBase / state.currentZoom, 0.8))
+                .attr("fill", d => {
+                    const price = typeof d.properties.SALE_PRICE === 'string'
+                        ? parseFloat(d.properties.SALE_PRICE.replace(/[^0-9.-]/g, ''))
+                        : d.properties.SALE_PRICE;
+                    return affordabilityScale(price);
+                })
+                .on("mouseover", (event, d) => {
+                    d3.select(event.target)
+                        .attr("r", Math.max(CONFIG.houseRadiusBase / state.currentZoom + 2, 3))
+                        .attr("stroke", "white")
+                        .attr("stroke-width", 1.5);
+
+                    const p = d.properties;
+                    const price = typeof p.SALE_PRICE === 'string'
+                        ? parseFloat(p.SALE_PRICE.replace(/[^0-9.-]/g, ''))
+                        : p.SALE_PRICE;
+
+                    tooltip.style("display", "block")
+                        .html(`
+                            <strong>${p.address}</strong><br>
+                            <strong>Sale Price:</strong> $${price ? price.toLocaleString() : 'N/A'}<br>
+                            <strong>Sale Date:</strong> ${p.SALE_DATE || 'N/A'}<br>
+                            <strong>Distance:</strong> ${p.dist_km ? p.dist_km.toFixed(2) : 'N/A'} km<br>
+                            <strong>Station:</strong> ${p.nearest_station || 'Unknown'}
+                        `)
+                        .style("left", (event.pageX + 12) + "px")
+                        .style("top", (event.pageY + 12) + "px");
+                })
+                .on("mouseout", (event) => {
+                    d3.select(event.target)
+                        .attr("r", Math.max(CONFIG.houseRadiusBase / state.currentZoom, 0.8))
+                        .attr("stroke-width", 0.5);
+                    tooltip.style("display", "none");
+                });
+        }
+
+        function ensureHousesLoaded(callback) {
+            if (state.housesLoaded && state.allHouses) {
+                callback();
+                return;
+            }
+
+            d3.json("../data/processed/New%20York%20City%20Sales%20Data/nyc_houses.geojson").then(housesData => {
+                state.allHouses = housesData.features;
+                state.housesLoaded = true;
+                callback();
+            }).catch(err => console.error("Error loading houses:", err));
+        }
+
+        function updateVisibility() {
+            d3.selectAll(".subway-station")
+                .style("display", d => state.visibleBoroughs.has(d.properties.borough) ? "block" : "none");
+            d3.selectAll(".house-point")
+                .style("display", d => state.visibleBoroughs.has(d.properties.borough || "Unknown") ? "block" : "none");
+            const visibleCount = state.allStations.filter(d => state.visibleBoroughs.has(d.properties.borough)).length;
+            d3.select("#stat-visible-stations").text(visibleCount);
+        }
+
+        // Load data
+        Promise.all([
+            d3.json("../data/processed/New%20York%20City%20Sales%20Data/nyc_boroughs.geojson"),
+            d3.json("../data/processed/New%20York%20City%20Sales%20Data/subway_stations.geojson")
+        ]).then(([boroughs, subways]) => {
+            state.allStations = subways.features;
+            d3.select("#stat-total-stations").text(state.allStations.length);
+            updateVisibility();
+
+            // Draw borough polygons
+            g.append("g").selectAll("path")
+                .data(boroughs.features)
+                .join("path")
+                .attr("class", "borough")
+                .attr("d", path)
+                .style("filter", "drop-shadow(0px 2px 4px rgba(0,0,0,0.1))");
+
+            // Draw subway stations
+            const stationLayer = g.append("g").attr("class", "station-layer");
+
+            stationLayer.selectAll("circle")
+                .data(subways.features)
+                .join("circle")
+                .attr("class", "subway-station")
+                .attr("cx", d => projection(d.geometry.coordinates)[0])
+                .attr("cy", d => projection(d.geometry.coordinates)[1])
+                .attr("r", CONFIG.stationRadiusBase)
+                .attr("fill", d => boroughColors[d.properties.borough] || boroughColors['Unknown'])
+                .on("mouseover", (event, d) => {
+                    d3.select(event.target).attr("r", 6);
+                    tooltip.style("display", "block")
+                        .html(`<strong>${d.properties.name}</strong><br>Borough: ${d.properties.borough}`)
+                        .style("left", (event.pageX + 12) + "px")
+                        .style("top", (event.pageY + 12) + "px");
+                })
+                .on("mouseout", () => {
+                    d3.selectAll(".subway-station").attr("r", CONFIG.stationRadiusBase);
+                    tooltip.style("display", "none");
+                })
+                .on("click", (event, d) => {
+                    state.selectedStation = d;
+                    const coords = projection(d.geometry.coordinates);
+                    svg.transition().duration(750)
+                        .call(zoom.transform, d3.zoomIdentity
+                            .translate(CONFIG.width / 2, CONFIG.height / 2)
+                            .scale(Math.max(state.currentZoom, 4))
+                            .translate(-coords[0], -coords[1]));
+                    ensureHousesLoaded(() => {
+                        showHousesForStation(d, state.maxDistance, state.year);
+                    });
+                });
+
+            g.append("g").attr("class", "house-layer");
+
+            // Borough labels
+            g.append("g").selectAll("text")
+                .data(boroughs.features)
+                .join("text")
+                .attr("class", "borough-label")
+                .attr("transform", d => "translate(" + path.centroid(d) + ")")
+                .attr("dy", "0.35em")
+                .text(d => d.properties.BoroName || "");
+
+            // Borough filters
+            d3.selectAll('.checkbox-label input').on('change', function() {
+                const borough = this.value;
+                if (this.checked) {
+                    state.visibleBoroughs.add(borough);
+                } else {
+                    state.visibleBoroughs.delete(borough);
+                }
+                updateVisibility();
+                if (state.selectedStation && state.housesLoaded) {
+                    showHousesForStation(state.selectedStation, state.maxDistance, state.year);
+                }
+            });
+
+            // Year slider
+            d3.select("#year-slider").on("input", function() {
+                state.year = +this.value;
+                d3.select("#year-display").text(state.year);
+                d3.select("#time-info").text(state.year + " • Showing data from this year");
+                if (state.selectedStation && state.housesLoaded) {
+                    showHousesForStation(state.selectedStation, state.maxDistance, state.year);
+                }
+            });
+
+            // Distance slider
+            d3.select("#distance-slider").on("input", function() {
+                state.maxDistance = +this.value;
+                d3.select("#distance-display").text(state.maxDistance.toFixed(1));
+                if (state.selectedStation && state.housesLoaded) {
+                    showHousesForStation(state.selectedStation, state.maxDistance, state.year);
+                }
+            });
+
+            // Station search
+            d3.select("#station-search").on("input", function() {
+                const searchTerm = this.value.toLowerCase();
+                d3.selectAll(".subway-station").classed("highlight", false);
+                
+                if (searchTerm.length > 0) {
+                    const matches = state.allStations.filter(d => 
+                        d.properties.name.toLowerCase().includes(searchTerm)
+                    );
+                    
+                    if (matches.length > 0) {
+                        matches.forEach(d => {
+                            d3.selectAll(".subway-station")
+                                .filter(s => s.properties.stop_id === d.properties.stop_id)
+                                .classed("highlight", true);
+                        });
+                        
+                        const firstMatch = matches[0];
+                        const coords = projection(firstMatch.geometry.coordinates);
+                        svg.transition().duration(750)
+                            .call(zoom.transform, d3.zoomIdentity
+                                .translate(CONFIG.width / 2, CONFIG.height / 2)
+                                .scale(4)
+                                .translate(-coords[0], -coords[1]));
+                    }
+                }
+            });
+
+            // Buttons
+            d3.select("#btn-show-all").on("click", () => {
+                d3.selectAll('.checkbox-label input').property("checked", true).dispatch("change");
+            });
+
+            d3.select("#btn-hide-houses").on("click", () => {
+                d3.select(".house-layer").selectAll("circle").remove();
+                state.selectedStation = null;
+                updateStats([]);
+            });
+
+            d3.select("#btn-download").on("click", () => {
+                const csv = [
+                    ["Station Name", "Borough", "Stop ID", "Latitude", "Longitude"],
+                    ...state.allStations.map(d => [
+                        '"' + d.properties.name + '"',
+                        d.properties.borough,
+                        d.properties.stop_id,
+                        d.geometry.coordinates[1],
+                        d.geometry.coordinates[0]
+                    ])
+                ].map(row => row.join(",")).join("\n");
+                
+                const blob = new Blob([csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "nyc_subway_stations.csv";
+                a.click();
+            });
+
+        }).catch(error => console.error("Error loading data:", error));
+    </script>
+</body>
+</html>
