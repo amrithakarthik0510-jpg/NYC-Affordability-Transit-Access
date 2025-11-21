@@ -586,14 +586,26 @@
 
             updateStats(nearby);
 
-            const prices = nearby.map(h => {
-                const p = h.properties.SALE_PRICE;
-                return typeof p === 'string' ? parseFloat(p.replace(/[^0-9.-]/g, '')) : p;
-            }).filter(p => p && p > 0);
+            // Compute visible affordability scores
+            const scores = nearby.map(h => {
+                const price = typeof h.properties.SALE_PRICE === 'string'
+                    ? parseFloat(h.properties.SALE_PRICE.replace(/[^0-9.-]/g, ''))
+                    : h.properties.SALE_PRICE;
 
-            const minPrice = prices.length > 0 ? d3.min(prices) : 0;
-            const maxPrice = prices.length > 0 ? d3.max(prices) : 1000;
-            updateLegendScale(minPrice, maxPrice);
+                const dist = h.properties.dist_km || 0.01;
+                return price && dist ? price / dist : 0;
+            }).filter(s => s >= 0);
+
+            // Compute min/max for legend + scale
+            const minScore = scores.length > 0 ? d3.min(scores) : 0;
+            const maxScore = scores.length > 0 ? d3.max(scores) : 1;
+
+            // Update color scale domain
+            affordabilityScale.domain([minScore, maxScore]);
+
+            // Update legend
+            updateLegendScale(minScore, maxScore);
+
 
             const houseLayer = d3.select(".house-layer");
             houseLayer.selectAll("circle").remove();
@@ -609,8 +621,28 @@
                     const price = typeof d.properties.SALE_PRICE === 'string'
                         ? parseFloat(d.properties.SALE_PRICE.replace(/[^0-9.-]/g, ''))
                         : d.properties.SALE_PRICE;
-                    return affordabilityScale(price);
+
+                    // Parse distance (avoid divide-by-zero)
+                    const dist = d.properties.dist_km || 0.01;
+
+                    // Sort scores
+                    const sorted = scores.slice().sort((a,b) => a - b);
+
+                    // Clip top 5%
+                    const lower = d3.quantile(sorted, 0.00);   // or 0.05
+                    const upper = d3.quantile(sorted, 0.95);   // or 0.90
+
+                    // Save domain for scale
+                    affordabilityScale.domain([Math.log1p(lower), Math.log1p(upper)]);
+
+                    const rawScore = price && dist ? price / dist : 0;
+                    const clipped = Math.min(Math.max(rawScore, lower), upper);
+                    const score = Math.log1p(clipped);
+
+                    return affordabilityScale(score);
+
                 })
+
                 .on("mouseover", (event, d) => {
                     d3.select(event.target)
                         .attr("r", Math.max(CONFIG.houseRadiusBase / state.currentZoom + 2, 3))
