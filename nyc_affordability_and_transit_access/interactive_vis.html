@@ -346,9 +346,9 @@
             <h3>Distance Filter (km)</h3>
             <div class="range-label">
                 <span>Max Distance:</span>
-                <span id="distance-display">2.0</span>
+                <span id="distance-display">1.0</span>
             </div>
-            <input type="range" id="distance-slider" min="0.5" max="5" value="2.0" step="0.1">
+            <input type="range" id="distance-slider" min="0" max="2" value="1.0" step="0.01">
         </div>
 
         <div class="controls-section">
@@ -641,7 +641,7 @@
                         ? parseFloat(p.SALE_PRICE.replace(/[^0-9.-]/g, ''))
                         : p.SALE_PRICE;
 
-                    const rawScore = price && p.dist_km ? price / p.dist_km : 0;
+                    const rawScore = price && p.dist_km ? price / (p.dist_km + 1) : 0;
                     const clipped = Math.min(Math.max(rawScore, lower), upper);
                     const score = Math.log1p(clipped);
                     return affordabilityScale(score);
