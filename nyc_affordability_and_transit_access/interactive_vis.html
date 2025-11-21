@@ -424,15 +424,15 @@
     </div>
 
     <div class="panel legend">
-        <h3>Price Per Sq Ft</h3>
+        <h3>Affordability Score</h3>
         <div class="legend-scale" id="legend-scale"></div>
         <div class="legend-labels">
-            <span id="legend-min">$0</span>
-            <span id="legend-mid">$500</span>
-            <span id="legend-max">$1000+</span>
+            <span id="legend-min">Low</span>
+            <span id="legend-mid">Medium</span>
+            <span id="legend-max">High</span>
         </div>
         <div class="legend-info">
-            <strong>Station Selection:</strong> Click any subway station to zoom and view nearby property sales within the distance filter radius, colored by price affordability.
+            <strong>Affordability Score:</strong> Price per km from station. <strong>Green</strong> = more affordable (lower price relative to distance). <strong>Red</strong> = less affordable (higher price).
         </div>
     </div>
 
@@ -455,6 +455,7 @@
             allHouses: null,
             housesLoaded: false,
             currentZoom: 1,
+            scoreStats: { min: 0, max: 1 }, // Track current score range
         };
 
         const boroughColors = {
@@ -466,8 +467,9 @@
             'Unknown': '#64748b'
         };
 
+        // affordability scale: Green (good/cheap) to Red (expensive)
         const affordabilityScale = d3.scaleLinear()
-            .domain([0, 500, 1000])
+            .domain([0, 0.5, 1])
             .range(['#10b981', '#f59e0b', '#ef4444'])
             .clamp(true);
 
@@ -565,21 +567,28 @@
             d3.select("#stat-loaded-sales").text(houses ? houses.length.toLocaleString() : '0');
         }
 
-        function updateLegendScale(minVal, maxVal) {
+        function updateLegendScale() {
             const steps = 100;
             const html = Array.from({ length: steps })
                 .map((_, i) => {
                     const ratio = i / steps;
-                    const val = minVal + (maxVal - minVal) * ratio;
-                    const color = affordabilityScale(val);
+                    const color = affordabilityScale(ratio);
                     return `<div class="legend-scale-item" style="background: ${color};"></div>`;
                 })
                 .join('');
             
             d3.select("#legend-scale").html(html);
-            d3.select("#legend-min").text('$' + Math.round(minVal));
-            d3.select("#legend-mid").text('$' + Math.round((minVal + maxVal) / 2));
-            d3.select("#legend-max").text('$' + Math.round(maxVal) + '+');
+        }
+
+        /**
+         * Compute affordability score: price-per-km from station
+         * Lower score = more affordable (cheap & close)
+         * Higher score = less affordable (expensive)
+         */
+        function computeAffordabilityScore(price, distKm) {
+            if (!price || !distKm || price <= 0 || distKm <= 0) return 0;
+            // Score = price per km (normalized later)
+            return price / distKm;
         }
 
         function showHousesForStation(station, maxDistKm, selectedYear) {
@@ -589,14 +598,12 @@
                 return;
             }
 
-            // Extract station coordinates 
             const [sLon, sLat] = station.geometry.coordinates;
 
-            // calculate distance using haversine Distance 
+            // Filter nearby houses
             const nearby = state.allHouses.filter(h => {
                 const p = h.properties;
                 const [hLon, hLat] = h.geometry.coordinates;
-                // Compute distance on the fly
                 const dist = haversineDistance(sLat, sLon, hLat, hLon);
                 p.dist_km = dist;
 
@@ -607,22 +614,32 @@
 
             updateStats(nearby);
 
+            // Compute raw affordability scores for all houses
             const scores = nearby.map(h => {
                 const price = typeof h.properties.SALE_PRICE === 'string'
                     ? parseFloat(h.properties.SALE_PRICE.replace(/[^0-9.-]/g, ''))
                     : h.properties.SALE_PRICE;
-
                 const dist = h.properties.dist_km || 0.01;
-                return price && dist ? price / dist : 0;
+                return computeAffordabilityScore(price, dist);
             });
 
-            // Clip 5% outliers
-            const sorted = scores.slice().sort((a,b) => a - b);
-            const lower = d3.quantile(sorted, 0.05);
-            const upper = d3.quantile(sorted, 0.95);
+            if (scores.length === 0) return;
 
-            affordabilityScale.domain([Math.log1p(lower), Math.log1p(upper)]);
-            updateLegendScale(lower, upper);
+            // Compute percentiles to normalize scores to [0, 1]
+            const sortedScores = scores.slice().sort((a, b) => a - b);
+            const p5 = d3.quantile(sortedScores, 0.05) || 0;
+            const p95 = d3.quantile(sortedScores, 0.95) || sortedScores[sortedScores.length - 1];
+
+            // Store for legend
+            state.scoreStats = { min: p5, max: p95 };
+
+            // Normalize function: clamp scores to [p5, p95] then scale to [0, 1]
+            const normalizeScore = (rawScore) => {
+                const clamped = Math.max(p5, Math.min(p95, rawScore));
+                return (clamped - p5) / (p95 - p5);
+            };
+
+            updateLegendScale();
 
             // --- DRAW HOUSES ---
             const houseLayer = d3.select(".house-layer");
@@ -640,11 +657,10 @@
                     const price = typeof p.SALE_PRICE === 'string'
                         ? parseFloat(p.SALE_PRICE.replace(/[^0-9.-]/g, ''))
                         : p.SALE_PRICE;
-
-                    const rawScore = price && p.dist_km ? price / (p.dist_km + 1) : 0;
-                    const clipped = Math.min(Math.max(rawScore, lower), upper);
-                    const score = Math.log1p(clipped);
-                    return affordabilityScale(score);
+                    const dist = p.dist_km || 0.01;
+                    const rawScore = computeAffordabilityScore(price, dist);
+                    const normalizedScore = normalizeScore(rawScore);
+                    return affordabilityScale(normalizedScore);
                 })
                 .on("mouseover", (event, d) => {
                     d3.select(event.target)
@@ -653,12 +669,20 @@
                         .attr("stroke-width", 1.5);
 
                     const p = d.properties;
+                    const price = typeof p.SALE_PRICE === 'string'
+                        ? parseFloat(p.SALE_PRICE.replace(/[^0-9.-]/g, ''))
+                        : p.SALE_PRICE;
+                    const dist = p.dist_km || 0.01;
+                    const rawScore = computeAffordabilityScore(price, dist);
+                    const normalizedScore = normalizeScore(rawScore);
+                    
                     tooltip.style("display", "block")
                         .html(`
                             <strong>${p.address}</strong><br>
-                            <strong>Sale Price:</strong> $${Number(p.SALE_PRICE).toLocaleString()}<br>
+                            <strong>Sale Price:</strong> $${Number(price).toLocaleString()}<br>
                             <strong>Sale Date:</strong> ${p.SALE_DATE}<br>
-                            <strong>Distance:</strong> ${p.dist_km.toFixed(2)} km<br>
+                            <strong>Distance:</strong> ${dist.toFixed(2)} km<br>
+                            <strong>Score:</strong> ${rawScore.toFixed(0)} (${(normalizedScore * 100).toFixed(0)}%)
                         `)
                         .style("left", (event.pageX + 12) + "px")
                         .style("top", (event.pageY + 12) + "px");
@@ -708,6 +732,7 @@
             state.allStations = subways.features;
             d3.select("#stat-total-stations").text(state.allStations.length);
             updateVisibility();
+            updateLegendScale();
 
             // Draw borough polygons
             g.append("g").selectAll("path")
@@ -716,7 +741,7 @@
                 .attr("class", "borough")
                 .attr("d", path)
                 .style("filter", "drop-shadow(0px 2px 4px rgba(0,0,0,0.1))")
-                .style("fill", "rgba(255, 255, 255, 0.05)") // very light over dark background
+                .style("fill", "rgba(255, 255, 255, 0.05)")
                 .style("stroke", "#334255");
 
             // Draw subway stations
@@ -805,16 +830,13 @@
             // Station search
             d3.select("#station-search").on("input", function() {
                 const searchTerm = this.value.toLowerCase();
-                // Clear highlights
                 d3.selectAll(".subway-station").classed("highlight", false);
 
-                // If search is empty → hide tooltip + stop
                 if (searchTerm.length === 0) {
                     tooltip.style("display", "none");
                     return;
                 }
 
-                // Find matching stations
                 const matches = state.allStations.filter(d =>
                     d.properties.name.toLowerCase().includes(searchTerm)
                 );
@@ -825,15 +847,12 @@
                 }
 
                 state.selectedStation = matches[0];
-                // Highlight the matched station
                 d3.selectAll(".subway-station")
                     .filter(d => d.properties.stop_id === state.selectedStation.properties.stop_id)
                     .classed("highlight", true);
 
-                // Compute projected coordinates
                 const [x, y] = projection(state.selectedStation.geometry.coordinates);
 
-                // Zoom + recenter smoothly
                 svg.transition().duration(750)
                     .call(
                         zoom.transform,
@@ -843,12 +862,10 @@
                             .translate(-x, -y)
                     )
                     .on("end", () => {
-                        // After zoom finishes → show houses for this station
                          ensureHousesLoaded(() => {
                             showHousesForStation(state.selectedStation, state.maxDistance, state.year);
                         });
 
-                        // Show tooltip (same as mouseover)
                         const p = state.selectedStation.properties;
                         tooltip.style("display", "block")
                             .html(`
