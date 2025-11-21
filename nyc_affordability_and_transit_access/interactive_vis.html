@@ -500,6 +500,20 @@
 
         svg.call(zoom);
 
+        function haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // km
+            const toRad = x => x * Math.PI / 180;
+
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+
+            const a = Math.sin(dLat / 2)**2 +
+                    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                    Math.sin(dLon / 2)**2;
+
+            return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
         function computeStats(houses) {
             if (!houses || houses.length === 0) {
                 return { median: null, avgPsf: null, corr: null };
@@ -575,18 +589,24 @@
                 return;
             }
 
-            const stationName = station.properties.name;
+            // Extract station coordinates 
+            const [sLon, sLat] = station.geometry.coordinates;
+
+            // calculate distance using haversine Distance 
             const nearby = state.allHouses.filter(h => {
                 const p = h.properties;
-                if (p.nearest_station !== stationName) return false;
-                if (p.dist_km == null || p.dist_km > maxDistKm) return false;
+                const [hLon, hLat] = h.geometry.coordinates;
+                // Compute distance on the fly
+                const dist = haversineDistance(sLat, sLon, hLat, hLon);
+                p.dist_km = dist;
+
+                if (dist > maxDistKm) return false;
                 if (selectedYear && p.SALE_YEAR !== selectedYear) return false;
                 return state.visibleBoroughs.has(p.borough || "Unknown");
             });
 
             updateStats(nearby);
 
-            // Compute visible affordability scores
             const scores = nearby.map(h => {
                 const price = typeof h.properties.SALE_PRICE === 'string'
                     ? parseFloat(h.properties.SALE_PRICE.replace(/[^0-9.-]/g, ''))
@@ -594,19 +614,17 @@
 
                 const dist = h.properties.dist_km || 0.01;
                 return price && dist ? price / dist : 0;
-            }).filter(s => s >= 0);
+            });
 
-            // Compute min/max for legend + scale
-            const minScore = scores.length > 0 ? d3.min(scores) : 0;
-            const maxScore = scores.length > 0 ? d3.max(scores) : 1;
+            // Clip 5% outliers
+            const sorted = scores.slice().sort((a,b) => a - b);
+            const lower = d3.quantile(sorted, 0.05);
+            const upper = d3.quantile(sorted, 0.95);
 
-            // Update color scale domain
-            affordabilityScale.domain([minScore, maxScore]);
+            affordabilityScale.domain([Math.log1p(lower), Math.log1p(upper)]);
+            updateLegendScale(lower, upper);
 
-            // Update legend
-            updateLegendScale(minScore, maxScore);
-
-
+            // --- DRAW HOUSES ---
             const houseLayer = d3.select(".house-layer");
             houseLayer.selectAll("circle").remove();
 
@@ -618,31 +636,16 @@
                 .attr("cy", d => projection(d.geometry.coordinates)[1])
                 .attr("r", Math.max(CONFIG.houseRadiusBase / state.currentZoom, 0.8))
                 .attr("fill", d => {
-                    const price = typeof d.properties.SALE_PRICE === 'string'
-                        ? parseFloat(d.properties.SALE_PRICE.replace(/[^0-9.-]/g, ''))
-                        : d.properties.SALE_PRICE;
+                    const p = d.properties;
+                    const price = typeof p.SALE_PRICE === 'string'
+                        ? parseFloat(p.SALE_PRICE.replace(/[^0-9.-]/g, ''))
+                        : p.SALE_PRICE;
 
-                    // Parse distance (avoid divide-by-zero)
-                    const dist = d.properties.dist_km || 0.01;
-
-                    // Sort scores
-                    const sorted = scores.slice().sort((a,b) => a - b);
-
-                    // Clip top 5%
-                    const lower = d3.quantile(sorted, 0.00);   // or 0.05
-                    const upper = d3.quantile(sorted, 0.95);   // or 0.90
-
-                    // Save domain for scale
-                    affordabilityScale.domain([Math.log1p(lower), Math.log1p(upper)]);
-
-                    const rawScore = price && dist ? price / dist : 0;
+                    const rawScore = price && p.dist_km ? price / p.dist_km : 0;
                     const clipped = Math.min(Math.max(rawScore, lower), upper);
                     const score = Math.log1p(clipped);
-
                     return affordabilityScale(score);
-
                 })
-
                 .on("mouseover", (event, d) => {
                     d3.select(event.target)
                         .attr("r", Math.max(CONFIG.houseRadiusBase / state.currentZoom + 2, 3))
@@ -650,17 +653,12 @@
                         .attr("stroke-width", 1.5);
 
                     const p = d.properties;
-                    const price = typeof p.SALE_PRICE === 'string'
-                        ? parseFloat(p.SALE_PRICE.replace(/[^0-9.-]/g, ''))
-                        : p.SALE_PRICE;
-
                     tooltip.style("display", "block")
                         .html(`
                             <strong>${p.address}</strong><br>
-                            <strong>Sale Price:</strong> $${price ? price.toLocaleString() : 'N/A'}<br>
-                            <strong>Sale Date:</strong> ${p.SALE_DATE || 'N/A'}<br>
-                            <strong>Distance:</strong> ${p.dist_km ? p.dist_km.toFixed(2) : 'N/A'} km<br>
-                            <strong>Station:</strong> ${p.nearest_station || 'Unknown'}
+                            <strong>Sale Price:</strong> $${Number(p.SALE_PRICE).toLocaleString()}<br>
+                            <strong>Sale Date:</strong> ${p.SALE_DATE}<br>
+                            <strong>Distance:</strong> ${p.dist_km.toFixed(2)} km<br>
                         `)
                         .style("left", (event.pageX + 12) + "px")
                         .style("top", (event.pageY + 12) + "px");
@@ -675,15 +673,22 @@
 
         function ensureHousesLoaded(callback) {
             if (state.housesLoaded && state.allHouses) {
-                callback();
+                if (callback) callback();
                 return;
             }
 
-            d3.json("../data/processed/New%20York%20City%20Houses.geojson").then(housesData => {
-                state.allHouses = housesData.features;
-                state.housesLoaded = true;
-                callback();
-            }).catch(err => console.error("Error loading houses:", err));
+            d3.json("../data/processed/New%20York%20City%20Houses.geojson")
+                .then(housesData => {
+                    if (!housesData || !housesData.features) {
+                        return;
+                    }
+                    state.allHouses = housesData.features;
+                    state.housesLoaded = true;
+                    if (callback) callback();
+                })
+                .catch(err => {
+                    console.error("Error loading houses:", err);
+                });
         }
 
         function updateVisibility() {
@@ -710,7 +715,9 @@
                 .join("path")
                 .attr("class", "borough")
                 .attr("d", path)
-                .style("filter", "drop-shadow(0px 2px 4px rgba(0,0,0,0.1))");
+                .style("filter", "drop-shadow(0px 2px 4px rgba(0,0,0,0.1))")
+                .style("fill", "rgba(255, 255, 255, 0.05)") // very light over dark background
+                .style("stroke", "#334255");
 
             // Draw subway stations
             const stationLayer = g.append("g").attr("class", "station-layer");
@@ -726,7 +733,11 @@
                 .on("mouseover", (event, d) => {
                     d3.select(event.target).attr("r", 6);
                     tooltip.style("display", "block")
-                        .html(`<strong>${d.properties.name}</strong><br>Borough: ${d.properties.borough}`)
+                        .html(`
+                                <strong>${d.properties.name}</strong><br>
+                                <strong>Borough:</strong> ${d.properties.borough}<br>
+                                <strong>Lines:</strong> ${d.properties.lines || "N/A"}
+                            `)
                         .style("left", (event.pageX + 12) + "px")
                         .style("top", (event.pageY + 12) + "px");
                 })
@@ -794,29 +805,60 @@
             // Station search
             d3.select("#station-search").on("input", function() {
                 const searchTerm = this.value.toLowerCase();
+                // Clear highlights
                 d3.selectAll(".subway-station").classed("highlight", false);
-                
-                if (searchTerm.length > 0) {
-                    const matches = state.allStations.filter(d => 
-                        d.properties.name.toLowerCase().includes(searchTerm)
-                    );
-                    
-                    if (matches.length > 0) {
-                        matches.forEach(d => {
-                            d3.selectAll(".subway-station")
-                                .filter(s => s.properties.stop_id === d.properties.stop_id)
-                                .classed("highlight", true);
-                        });
-                        
-                        const firstMatch = matches[0];
-                        const coords = projection(firstMatch.geometry.coordinates);
-                        svg.transition().duration(750)
-                            .call(zoom.transform, d3.zoomIdentity
-                                .translate(CONFIG.width / 2, CONFIG.height / 2)
-                                .scale(4)
-                                .translate(-coords[0], -coords[1]));
-                    }
+
+                // If search is empty → hide tooltip + stop
+                if (searchTerm.length === 0) {
+                    tooltip.style("display", "none");
+                    return;
                 }
+
+                // Find matching stations
+                const matches = state.allStations.filter(d =>
+                    d.properties.name.toLowerCase().includes(searchTerm)
+                );
+
+                if (matches.length === 0) {
+                    tooltip.style("display", "none");
+                    return;
+                }
+
+                state.selectedStation = matches[0];
+                // Highlight the matched station
+                d3.selectAll(".subway-station")
+                    .filter(d => d.properties.stop_id === state.selectedStation.properties.stop_id)
+                    .classed("highlight", true);
+
+                // Compute projected coordinates
+                const [x, y] = projection(state.selectedStation.geometry.coordinates);
+
+                // Zoom + recenter smoothly
+                svg.transition().duration(750)
+                    .call(
+                        zoom.transform,
+                        d3.zoomIdentity
+                            .translate(CONFIG.width / 2, CONFIG.height / 2)
+                            .scale(7)
+                            .translate(-x, -y)
+                    )
+                    .on("end", () => {
+                        // After zoom finishes → show houses for this station
+                         ensureHousesLoaded(() => {
+                            showHousesForStation(state.selectedStation, state.maxDistance, state.year);
+                        });
+
+                        // Show tooltip (same as mouseover)
+                        const p = state.selectedStation.properties;
+                        tooltip.style("display", "block")
+                            .html(`
+                                <strong>${p.name}</strong><br>
+                                <strong>Borough:</strong> ${p.borough}<br>
+                                <strong>Lines:</strong> ${p.lines || "N/A"}
+                            `)
+                            .style("left", (x + 12) + "px")
+                            .style("top", (y + 12) + "px");
+                    });
             });
 
             // Buttons
