@@ -424,15 +424,15 @@
     </div>
 
     <div class="panel legend">
-        <h3>Affordability Score</h3>
+        <h3>Affordability Score ($/km)</h3>
         <div class="legend-scale" id="legend-scale"></div>
         <div class="legend-labels">
-            <span id="legend-min">Low</span>
-            <span id="legend-mid">Medium</span>
-            <span id="legend-max">High</span>
+            <span id="legend-min">$0</span>
+            <span id="legend-mid">—</span>
+            <span id="legend-max">$0</span>
         </div>
         <div class="legend-info">
-            <strong>Affordability Score:</strong> Price per km from station. <strong>Green</strong> = more affordable (lower price relative to distance). <strong>Red</strong> = less affordable (higher price).
+            <strong>Affordability Score:</strong> Price per km from station. <strong>Green</strong> = more affordable (lower $/km). <strong>Red</strong> = less affordable (higher $/km).
         </div>
     </div>
 
@@ -455,7 +455,7 @@
             allHouses: null,
             housesLoaded: false,
             currentZoom: 1,
-            scoreStats: { min: 0, max: 1 }, // Track current score range
+            scoreStats: { min: 0, max: 1 },
         };
 
         const boroughColors = {
@@ -467,7 +467,6 @@
             'Unknown': '#64748b'
         };
 
-        // affordability scale: Green (good/cheap) to Red (expensive)
         const affordabilityScale = d3.scaleLinear()
             .domain([0, 0.5, 1])
             .range(['#10b981', '#f59e0b', '#ef4444'])
@@ -503,7 +502,7 @@
         svg.call(zoom);
 
         function haversineDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // km
+            const R = 6371;
             const toRad = x => x * Math.PI / 180;
 
             const dLat = toRad(lat2 - lat1);
@@ -578,16 +577,18 @@
                 .join('');
             
             d3.select("#legend-scale").html(html);
+            
+            // Update labels with actual dollar amounts
+            const { min, max } = state.scoreStats;
+            const mid = (min + max) / 2;
+            
+            d3.select("#legend-min").text('$' + Math.round(min).toLocaleString());
+            d3.select("#legend-mid").text('$' + Math.round(mid).toLocaleString());
+            d3.select("#legend-max").text('$' + Math.round(max).toLocaleString());
         }
 
-        /**
-         * Compute affordability score: price-per-km from station
-         * Lower score = more affordable (cheap & close)
-         * Higher score = less affordable (expensive)
-         */
         function computeAffordabilityScore(price, distKm) {
             if (!price || !distKm || price <= 0 || distKm <= 0) return 0;
-            // Score = price per km (normalized later)
             return price / distKm;
         }
 
@@ -600,7 +601,6 @@
 
             const [sLon, sLat] = station.geometry.coordinates;
 
-            // Filter nearby houses
             const nearby = state.allHouses.filter(h => {
                 const p = h.properties;
                 const [hLon, hLat] = h.geometry.coordinates;
@@ -614,7 +614,6 @@
 
             updateStats(nearby);
 
-            // Compute raw affordability scores for all houses
             const scores = nearby.map(h => {
                 const price = typeof h.properties.SALE_PRICE === 'string'
                     ? parseFloat(h.properties.SALE_PRICE.replace(/[^0-9.-]/g, ''))
@@ -625,23 +624,20 @@
 
             if (scores.length === 0) return;
 
-            // Compute percentiles to normalize scores to [0, 1]
             const sortedScores = scores.slice().sort((a, b) => a - b);
             const p5 = d3.quantile(sortedScores, 0.05) || 0;
             const p95 = d3.quantile(sortedScores, 0.95) || sortedScores[sortedScores.length - 1];
 
-            // Store for legend
             state.scoreStats = { min: p5, max: p95 };
 
-            // Normalize function: clamp scores to [p5, p95] then scale to [0, 1]
+            // Update legend with new price range
+            updateLegendScale();
+
             const normalizeScore = (rawScore) => {
                 const clamped = Math.max(p5, Math.min(p95, rawScore));
                 return (clamped - p5) / (p95 - p5);
             };
 
-            updateLegendScale();
-
-            // --- DRAW HOUSES ---
             const houseLayer = d3.select(".house-layer");
             houseLayer.selectAll("circle").remove();
 
@@ -682,7 +678,7 @@
                             <strong>Sale Price:</strong> $${Number(price).toLocaleString()}<br>
                             <strong>Sale Date:</strong> ${p.SALE_DATE}<br>
                             <strong>Distance:</strong> ${dist.toFixed(2)} km<br>
-                            <strong>Score:</strong> ${rawScore.toFixed(0)} (${(normalizedScore * 100).toFixed(0)}%)
+                            <strong>Score ($/km):</strong> $${Math.round(rawScore).toLocaleString()}
                         `)
                         .style("left", (event.pageX + 12) + "px")
                         .style("top", (event.pageY + 12) + "px");
