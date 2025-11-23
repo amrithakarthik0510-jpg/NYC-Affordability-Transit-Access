@@ -50,10 +50,6 @@
         .subway-station:hover {
             filter: drop-shadow(0px 2px 8px rgba(59, 130, 246, 0.6));
         }
-        .subway-station.selected {
-            filter: drop-shadow(0px 0px 12px rgba(34, 197, 94, 0.8));
-            stroke-width: 2;
-        }
         .house-point {
             cursor: pointer;
             transition: all 0.1s ease;
@@ -491,6 +487,7 @@
             .scaleExtent([1, 16])
             .on("zoom", (event) => {
                 state.currentZoom = event.transform.k;
+                state.currentTransform = event.transform;
                 g.attr("transform", event.transform);
                 const scale = state.currentZoom;
                 d3.selectAll(".subway-station")
@@ -751,29 +748,67 @@
                 .attr("cy", d => projection(d.geometry.coordinates)[1])
                 .attr("r", CONFIG.stationRadiusBase)
                 .attr("fill", d => boroughColors[d.properties.borough] || boroughColors['Unknown'])
-                .on("mouseover", (event, d) => {
-                    d3.select(event.target).attr("r", 6);
+                .on("mouseover", function(event, d) {                    
+                    d3.select(this).attr("data-prev-radius", d3.select(this).attr("r"));
+                    d3.select(this).attr("r", 4);
+
                     tooltip.style("display", "block")
                         .html(`
-                                <strong>${d.properties.name}</strong><br>
-                                <strong>Borough:</strong> ${d.properties.borough}<br>
-                                <strong>Lines:</strong> ${d.properties.lines || "N/A"}
-                            `)
+                            <strong>${d.properties.name}</strong><br>
+                            <strong>Borough:</strong> ${d.properties.borough}<br>
+                            <strong>Lines:</strong> ${d.properties.lines || "N/A"}
+                        `)
                         .style("left", (event.pageX + 12) + "px")
                         .style("top", (event.pageY + 12) + "px");
                 })
-                .on("mouseout", () => {
-                    d3.selectAll(".subway-station").attr("r", CONFIG.stationRadiusBase);
+
+                .on("mouseout", function(event, d) {
+                    if (state.selectedStationId != d.properties.stop_id) {
+                        const prev = d3.select(this).attr("data-prev-radius");
+                        d3.select(this).attr("r", prev);
+                    }
                     tooltip.style("display", "none");
                 })
-                .on("click", (event, d) => {
+
+                .on("click", function(event, d) {
+                    tooltip.style("display", "none");
+                    state.selectedStationId = d.properties.stop_id
                     state.selectedStation = d;
+                    const clickedCircle = this;
                     const coords = projection(d.geometry.coordinates);
-                    svg.transition().duration(750)
-                        .call(zoom.transform, d3.zoomIdentity
-                            .translate(CONFIG.width / 2, CONFIG.height / 2)
-                            .scale(Math.max(state.currentZoom, 4))
-                            .translate(-coords[0], -coords[1]));
+
+                    svg.transition()
+                        .duration(750)
+                        .call(
+                            zoom.transform,
+                            d3.zoomIdentity
+                                .translate(CONFIG.width / 2, CONFIG.height / 2)
+                                .scale(Math.max(state.currentZoom, 4))
+                                .translate(-coords[0], -coords[1])
+                        )
+                        .on("end",function() {
+                            const circle = d3.select(clickedCircle);
+
+                            d3.selectAll(".subway-station").style("stroke", "white");
+                            const base = boroughColors[d.properties.borough] || boroughColors["Unknown"];
+                            const darker = d3.color(base).darker(3);
+                            circle.style("stroke", darker);
+                            circle .attr("r", 4);
+
+                            const [x, y] = projection(d.geometry.coordinates);
+                            const transformed = state.currentTransform.apply([x, y]);
+
+                            tooltip
+                                .style("display", "block")
+                                .html(`
+                                    <strong>${d.properties.name}</strong><br>
+                                    <strong>Borough:</strong> ${d.properties.borough}<br>
+                                    <strong>Lines:</strong> ${d.properties.lines || "N/A"}
+                                `)
+                                .style("left", (transformed[0] + 12) + "px")
+                                .style("top", (transformed[1] + 12) + "px");
+                        });
+
                     ensureHousesLoaded(() => {
                         showHousesForStation(d, state.maxDistance, state.year);
                     });
