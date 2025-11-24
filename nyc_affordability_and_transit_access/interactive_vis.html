@@ -128,6 +128,13 @@
         .controls-section:last-child {
             border-bottom: none;
         }
+        .station {
+            bottom: 230px;    
+            left: 16px;       
+            min-width: 240px;
+            z-index: 150;     
+            pointer-events: auto;
+        }       
         .stats {
             bottom: 16px;
             left: 16px;
@@ -323,7 +330,7 @@
     <div class="tooltip"></div>
 
     <div class="panel title">
-        <h1>🏙️ NYC Housing & Transit</h1>
+        <h1>NYC Housing & Transit</h1>
         <p>Explore housing affordability in relation to subway proximity from 2003–2024. Click any station to zoom and see nearby sales.</p>
     </div>
 
@@ -391,6 +398,18 @@
         </div>
     </div>
 
+    <div class="panel station">
+        <h3>Station Info</h3>
+        <div class="stat-row">
+            <span class="stat-label">Station Name:</span>
+            <span class="stat-value" id="stat-station-name">—</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Lines:</span>
+            <span class="stat-value" id="stat-station-lines">—</span>
+        </div>
+    </div>
+
     <div class="panel stats">
         <h3>Statistics</h3>
         <div class="stat-row">
@@ -444,7 +463,7 @@
 
         let state = {
             year: 2003,
-            maxDistance: 1.0,
+            maxDistance: 1,
             visibleBoroughs: new Set(['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island']),
             selectedStation: null,
             allStations: [],
@@ -777,6 +796,9 @@
                     const clickedCircle = this;
                     const coords = projection(d.geometry.coordinates);
 
+                    d3.select("#stat-station-name").text(d.properties.name);
+                    d3.select("#stat-station-lines").text(d.properties.lines || "-");
+
                     svg.transition()
                         .duration(750)
                         .call(
@@ -916,7 +938,17 @@
 
             d3.select("#btn-hide-houses").on("click", () => {
                 d3.select(".house-layer").selectAll("circle").remove();
+                if (state.selectedStation) {
+                    const selectedCircle = d3.selectAll(".subway-station")
+                        .filter(d => d.properties.stop_id === state.selectedStation.properties.stop_id);
+                    selectedCircle.attr("r", Math.max(CONFIG.stationRadiusBase / state.currentZoom, 1))
+                    .style("stroke", "white")
+                    tooltip.style("display", "none")
+                }
                 state.selectedStation = null;
+                state.selectedStationId = null;
+                d3.select("#stat-station-name").text("-");
+                d3.select("#stat-station-lines").text("-");
                 updateStats([]);
             });
 
