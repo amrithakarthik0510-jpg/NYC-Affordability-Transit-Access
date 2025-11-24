@@ -707,27 +707,6 @@
                 });
         }
 
-        function ensureHousesLoaded(callback) {
-            if (state.housesLoaded && state.allHouses) {
-                if (callback) callback();
-                return;
-            }
-
-
-            d3.json("data/processed/New%20York%20City%20Houses.geojson")
-                .then(housesData => {
-                    if (!housesData || !housesData.features) {
-                        return;
-                    }
-                    state.allHouses = housesData.features;
-                    state.housesLoaded = true;
-                    if (callback) callback();
-                })
-                .catch(err => {
-                    console.error("Error loading houses:", err);
-                });
-        }
-
         function updateVisibility() {
             d3.selectAll(".subway-station")
                 .style("display", d => state.visibleBoroughs.has(d.properties.borough) ? "block" : "none");
@@ -740,12 +719,18 @@
         // Load data
         Promise.all([
             d3.json("data/processed/New%20York%20City%20Boroughs.geojson"),
-            d3.json("data/processed/New%20York%20City%20Subway%20Stations.geojson")
+            d3.json("data/processed/New%20York%20City%20Subway%20Stations.geojson"),
+            d3.json("data/processed/New%20York%20City%20Houses.geojson")
         ]).then(([boroughs, subways, houses]) => {
             state.allStations = subways.features;
             d3.select("#stat-total-stations").text(state.allStations.length);
             updateVisibility();
             updateLegendScale();
+
+            if (houses && houses.features) {
+                state.allHouses = houses.features;
+                state.housesLoaded = true;
+            }
 
             // Draw borough polygons
             g.append("g").selectAll("path")
@@ -832,9 +817,7 @@
                                 .style("top", (transformed[1] + 12) + "px");
                         });
 
-                    ensureHousesLoaded(() => {
-                        showHousesForStation(d, state.maxDistance, state.year);
-                    });
+                    showHousesForStation(d, state.maxDistance, state.year);
                 });
 
             g.append("g").attr("class", "house-layer");
@@ -916,9 +899,8 @@
                             .translate(-x, -y)
                     )
                     .on("end", () => {
-                         ensureHousesLoaded(() => {
-                            showHousesForStation(state.selectedStation, state.maxDistance, state.year);
-                        });
+                        showHousesForStation(state.selectedStation, state.maxDistance, state.year);
+
 
                         const p = state.selectedStation.properties;
                         tooltip.style("display", "block")
