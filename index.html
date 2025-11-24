@@ -714,7 +714,7 @@
             }
 
 
-            d3.json("/NYC-Affordability-Transit-Access/data/processed/New%20York%20City%20Houses.geojson")
+            d3.json("data/processed/New%20York%20City%20Houses.geojson")
                 .then(housesData => {
                     if (!housesData || !housesData.features) {
                         return;
@@ -739,8 +739,8 @@
 
         // Load data
         Promise.all([
-            d3.json("/NYC-Affordability-Transit-Access/data/processed/New%20York%20City%20Boroughs.geojson"),
-            d3.json("/NYC-Affordability-Transit-Access/data/processed/New%20York%20City%20Subway%20Stations.geojson")
+            d3.json("data/processed/New%20York%20City%20Boroughs.geojson"),
+            d3.json("data/processed/New%20York%20City%20Subway%20Stations.geojson")
         ]).then(([boroughs, subways, houses]) => {
             state.allStations = subways.features;
             d3.select("#stat-total-stations").text(state.allStations.length);
