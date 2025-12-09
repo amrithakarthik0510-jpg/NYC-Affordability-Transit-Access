@@ -1721,9 +1721,9 @@
 
             // List of your split GeoJSON files
             const houseFiles = [
-                "../data/github/New-York-City-Houses-1.geojson",
-                "../data/github/New-York-City-Houses-2.geojson",
-                "../data/github/New-York-City-Houses-3.geojson"
+                "../data/pages/New-York-City-Houses-1.geojson",
+                "../data/pages/New-York-City-Houses-2.geojson",
+                "../data/pages/New-York-City-Houses-3.geojson"
             ];
 
             // Fetch all files in parallel using retry logic
@@ -1761,8 +1761,8 @@
 
         // Load data
         Promise.all([
-            d3.json("data/github/New-York-City-Boroughs.geojson"),
-            d3.json("data/github/New-York-City-Subway-Stations.geojson"),
+            d3.json("data/pages/New-York-City-Boroughs.geojson"),
+            d3.json("data/pages/New-York-City-Subway-Stations.geojson"),
         ]).then(([boroughs, subways]) => {
             state.allStations = subways.features;
             d3.select("#stat-total-stations").text(state.allStations.length);
