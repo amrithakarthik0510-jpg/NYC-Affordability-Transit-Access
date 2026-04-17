@@ -31,7 +31,7 @@
             filter: brightness(1.15);
         }
         .borough-label {
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 600;
             fill: #94a3b8;
             fill-opacity: 0.6;
@@ -67,12 +67,12 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(148, 163, 184, 0.3);
             border-radius: 8px;
-            padding: 12px;
+            padding: 8px 10px;
             pointer-events: none;
             display: none;
-            font-size: 12px;
+            font-size: 11px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.6);
-            max-width: 280px;
+            max-width: 220px;
             z-index: 2000;
             color: #e2e8f0;
         }
@@ -81,248 +81,266 @@
         }
         .panel {
             position: fixed;
-            background: rgba(15, 23, 42, 0.85);
+            background: rgba(15, 23, 42, 0.88);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            border-radius: 8px;
+            padding: 8px 10px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
             z-index: 100;
             color: #e2e8f0;
+            font-size: 11px;
         }
         .panel h2, .panel h3 {
-            margin: 0 0 12px 0;
-            font-size: 16px;
-            font-weight: 600;
+            margin: 0 0 6px 0;
+            font-size: 11px;
+            font-weight: 700;
             color: #f1f5f9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .panel p {
-            margin: 0 0 8px 0;
-            font-size: 13px;
+            margin: 0 0 4px 0;
+            font-size: 10px;
             color: #cbd5e1;
-            line-height: 1.4;
+            line-height: 1.3;
         }
+
+        /* Title — top left, compact */
         .title {
-            top: 16px;
-            left: 16px;
-            max-width: 420px;
+            top: 8px;
+            left: 8px;
+            max-width: 180px;
         }
         .title h1 {
-            margin: 0 0 6px 0;
-            font-size: 20px;
+            margin: 0 0 3px 0;
+            font-size: 12px;
             font-weight: 700;
             color: #f1f5f9;
         }
+
+        /* Controls toggle button */
+        #controls-toggle {
+            position: fixed;
+            top: 8px;
+            right: 8px;
+            z-index: 200;
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 10px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+        #controls-toggle:hover {
+            background: rgba(51, 65, 85, 0.9);
+        }
+
+        /* Controls panel — collapsible, compact */
         .controls {
-            top: 16px;
-            right: 16px;
-            width: 280px;
-            max-height: calc(100vh - 32px);
+            top: 34px;
+            right: 8px;
+            width: 190px;
+            max-height: calc(100vh - 50px);
             overflow-y: auto;
+            display: block;
+        }
+        .controls.hidden {
+            display: none;
         }
         .controls-section {
-            margin-bottom: 16px;
-            padding-bottom: 16px;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
             border-bottom: 1px solid rgba(148, 163, 184, 0.15);
         }
         .controls-section:last-child {
             border-bottom: none;
+            margin-bottom: 0;
         }
+
+        /* Bottom left panels */
         .station {
-            bottom: 230px;    
-            left: 16px;       
-            min-width: 240px;
-            z-index: 150;     
+            bottom: 100px;
+            left: 8px;
+            min-width: 150px;
+            z-index: 150;
             pointer-events: auto;
-        }       
+        }
         .stats {
-            bottom: 16px;
-            left: 16px;
-            min-width: 240px;
+            bottom: 8px;
+            left: 8px;
+            min-width: 150px;
         }
         .stat-row {
             display: flex;
             justify-content: space-between;
-            margin: 8px 0;
-            font-size: 13px;
+            margin: 3px 0;
+            font-size: 10px;
+            gap: 6px;
         }
         .stat-label {
             color: #94a3b8;
+            white-space: nowrap;
         }
         .stat-value {
             font-weight: 600;
             color: #93c5fd;
+            text-align: right;
         }
+
+        /* Legend — bottom right, compact */
         .legend {
-            bottom: 16px;
-            right: 16px;
-            min-width: 260px;
+            bottom: 8px;
+            right: 8px;
+            min-width: 160px;
+            max-width: 180px;
         }
         .legend-scale {
             display: flex;
-            height: 24px;
-            border-radius: 4px;
+            height: 10px;
+            border-radius: 3px;
             overflow: hidden;
-            margin-bottom: 8px;
+            margin-bottom: 3px;
             box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
         }
         .legend-scale-item {
             flex: 1;
-            border-right: 1px solid rgba(0,0,0,0.2);
-        }
-        .legend-scale-item:last-child {
-            border-right: none;
         }
         .legend-labels {
             display: flex;
             justify-content: space-between;
-            font-size: 11px;
+            font-size: 9px;
             color: #94a3b8;
-            margin-bottom: 12px;
+            margin-bottom: 4px;
         }
         .legend-info {
-            font-size: 12px;
+            font-size: 9px;
             color: #cbd5e1;
-            line-height: 1.5;
+            line-height: 1.3;
         }
+
+        /* Sliders */
         input[type="range"] {
             width: 100%;
-            height: 6px;
-            border-radius: 3px;
+            height: 4px;
+            border-radius: 2px;
             background: linear-gradient(to right, #0ea5e9, #10b981);
             outline: none;
             -webkit-appearance: none;
             appearance: none;
+            margin: 3px 0;
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 18px;
-            height: 18px;
+            width: 13px;
+            height: 13px;
             border-radius: 50%;
             background: #3b82f6;
             cursor: pointer;
             border: 2px solid white;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-            transition: all 0.2s ease;
-        }
-        input[type="range"]::-webkit-slider-thumb:hover {
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.8);
+            box-shadow: 0 1px 4px rgba(59, 130, 246, 0.4);
         }
         input[type="range"]::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
+            width: 13px;
+            height: 13px;
             border-radius: 50%;
             background: #3b82f6;
             cursor: pointer;
             border: 2px solid white;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
         }
         .range-label {
             display: flex;
             justify-content: space-between;
-            font-size: 12px;
+            font-size: 10px;
             color: #94a3b8;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
+
+        /* Buttons */
         .btn {
             width: 100%;
-            padding: 10px 12px;
-            margin: 4px 0;
+            padding: 5px 8px;
+            margin: 2px 0;
             border: 1px solid rgba(148, 163, 184, 0.3);
             background: rgba(51, 65, 85, 0.5);
             color: #e2e8f0;
-            border-radius: 6px;
+            border-radius: 5px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 10px;
             font-weight: 500;
             transition: all 0.2s ease;
         }
         .btn:hover {
             background: rgba(51, 65, 85, 0.8);
-            border-color: rgba(148, 163, 184, 0.5);
         }
         .btn.active {
             background: #3b82f6;
             border-color: #3b82f6;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
         }
+
+        /* Checkboxes */
         .checkbox-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 3px;
         }
         .checkbox-label {
             display: flex;
             align-items: center;
-            font-size: 13px;
+            font-size: 10px;
             cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .checkbox-label:hover {
-            color: #f1f5f9;
         }
         .checkbox-label input {
-            margin-right: 8px;
+            margin-right: 5px;
             cursor: pointer;
-            width: 16px;
-            height: 16px;
+            width: 11px;
+            height: 11px;
         }
         .color-swatch {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 8px;
+            height: 8px;
             border-radius: 2px;
-            margin-right: 6px;
+            margin-right: 4px;
+            flex-shrink: 0;
         }
+
+        /* Search & select */
         select, input[type="text"] {
             width: 100%;
-            padding: 8px 10px;
-            margin: 4px 0;
+            padding: 4px 6px;
+            margin: 2px 0;
             border: 1px solid rgba(148, 163, 184, 0.3);
             background: rgba(30, 41, 59, 0.6);
             color: #e2e8f0;
-            border-radius: 6px;
-            font-size: 13px;
-        }
-        select:hover, input[type="text"]:hover {
-            border-color: rgba(148, 163, 184, 0.5);
+            border-radius: 5px;
+            font-size: 10px;
         }
         select:focus, input[type="text"]:focus {
             outline: none;
             border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
         }
+
         .time-info {
             background: rgba(59, 130, 246, 0.1);
             border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 6px;
-            padding: 8px;
-            margin-top: 8px;
-            font-size: 12px;
+            border-radius: 4px;
+            padding: 4px 6px;
+            margin-top: 4px;
+            font-size: 10px;
             color: #93c5fd;
             text-align: center;
             font-weight: 500;
         }
-        .controls::-webkit-scrollbar {
-            width: 6px;
-        }
-        .controls::-webkit-scrollbar-track {
-            background: rgba(148, 163, 184, 0.1);
-            border-radius: 3px;
-        }
-        .controls::-webkit-scrollbar-thumb {
-            background: rgba(148, 163, 184, 0.3);
-            border-radius: 3px;
-        }
-        .controls::-webkit-scrollbar-thumb:hover {
-            background: rgba(148, 163, 184, 0.5);
-        }
-        @media (max-width: 768px) {
-            .controls { width: 100%; right: 0; max-width: none; }
-            .title { max-width: calc(100vw - 32px); }
-            .legend { display: none; }
-        }
+
+        /* Scrollbar */
+        .controls::-webkit-scrollbar { width: 4px; }
+        .controls::-webkit-scrollbar-track { background: rgba(148, 163, 184, 0.1); border-radius: 2px; }
+        .controls::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 2px; }
     </style>
 </head>
 <body>
@@ -331,10 +349,12 @@
 
     <div class="panel title">
         <h1>NYC Housing & Transit</h1>
-        <p>Explore housing affordability in relation to subway proximity from 2003–2024. Click any station to zoom and see nearby sales.</p>
+        <p>Click a station to explore nearby sales 2003–2024.</p>
     </div>
 
-    <div class="panel controls">
+    <button id="controls-toggle">⚙ Controls</button>
+
+    <div class="panel controls" id="controls-panel">
         <div class="controls-section">
             <h3>Time Range</h3>
             <div class="range-label">
@@ -342,58 +362,53 @@
                 <span id="year-display">2003</span>
             </div>
             <input type="range" id="year-slider" min="2003" max="2024" value="2003" step="1">
-            <div class="time-info" id="time-info">2003 • Showing all data from this year</div>
+            <div class="time-info" id="time-info">2003 • All data</div>
         </div>
 
         <div class="controls-section">
             <h3>Distance Filter (km)</h3>
             <div class="range-label">
-                <span>Max Distance:</span>
+                <span>Max:</span>
                 <span id="distance-display">1.0</span>
             </div>
             <input type="range" id="distance-slider" min="0" max="2" value="1.0" step="0.01">
         </div>
 
         <div class="controls-section">
-            <h3>Filter by Borough</h3>
+            <h3>Borough</h3>
             <div class="checkbox-group">
                 <label class="checkbox-label">
                     <input type="checkbox" value="Manhattan" checked>
-                    <span class="color-swatch" style="background: #ef4444;"></span>
-                    Manhattan
+                    <span class="color-swatch" style="background: #ef4444;"></span>Manhattan
                 </label>
                 <label class="checkbox-label">
                     <input type="checkbox" value="Brooklyn" checked>
-                    <span class="color-swatch" style="background: #3b82f6;"></span>
-                    Brooklyn
+                    <span class="color-swatch" style="background: #3b82f6;"></span>Brooklyn
                 </label>
                 <label class="checkbox-label">
                     <input type="checkbox" value="Queens" checked>
-                    <span class="color-swatch" style="background: #10b981;"></span>
-                    Queens
+                    <span class="color-swatch" style="background: #10b981;"></span>Queens
                 </label>
                 <label class="checkbox-label">
                     <input type="checkbox" value="Bronx" checked>
-                    <span class="color-swatch" style="background: #f59e0b;"></span>
-                    Bronx
+                    <span class="color-swatch" style="background: #f59e0b;"></span>Bronx
                 </label>
                 <label class="checkbox-label">
                     <input type="checkbox" value="Staten Island" checked>
-                    <span class="color-swatch" style="background: #a855f7;"></span>
-                    Staten Island
+                    <span class="color-swatch" style="background: #a855f7;"></span>Staten Island
                 </label>
             </div>
         </div>
 
         <div class="controls-section">
             <h3>Search Station</h3>
-            <input type="text" id="station-search" placeholder="Type station name...">
+            <input type="text" id="station-search" placeholder="Station name...">
         </div>
 
         <div class="controls-section">
-            <h3>Display Options</h3>
-            <button class="btn" id="btn-show-all">Show All Stations</button>
-            <button class="btn" id="btn-hide-houses">Clear Selection</button>
+            <h3>Options</h3>
+            <button class="btn" id="btn-show-all">Show All</button>
+            <button class="btn" id="btn-hide-houses">Clear</button>
             <button class="btn" id="btn-download">Download CSV</button>
         </div>
     </div>
@@ -401,7 +416,7 @@
     <div class="panel station">
         <h3>Station Info</h3>
         <div class="stat-row">
-            <span class="stat-label">Station Name:</span>
+            <span class="stat-label">Name:</span>
             <span class="stat-value" id="stat-station-name">—</span>
         </div>
         <div class="stat-row">
@@ -417,11 +432,11 @@
             <span class="stat-value" id="stat-total-stations">0</span>
         </div>
         <div class="stat-row">
-            <span class="stat-label">Visible Stations:</span>
+            <span class="stat-label">Visible:</span>
             <span class="stat-value" id="stat-visible-stations">0</span>
         </div>
         <div class="stat-row">
-            <span class="stat-label">Loaded Sales:</span>
+            <span class="stat-label">Sales:</span>
             <span class="stat-value" id="stat-loaded-sales">0</span>
         </div>
         <div class="stat-row">
@@ -433,13 +448,13 @@
             <span class="stat-value" id="stat-avg-psf">—</span>
         </div>
         <div class="stat-row">
-            <span class="stat-label">Price–Distance Corr:</span>
+            <span class="stat-label">Corr:</span>
             <span class="stat-value" id="stat-correlation">—</span>
         </div>
     </div>
 
     <div class="panel legend">
-        <h3>Affordability Score ($/km)</h3>
+        <h3>Affordability ($/km)</h3>
         <div class="legend-scale" id="legend-scale"></div>
         <div class="legend-labels">
             <span id="legend-min">$0</span>
@@ -447,11 +462,17 @@
             <span id="legend-max">$0</span>
         </div>
         <div class="legend-info">
-            <strong>Affordability Score:</strong> Price per km from station. <strong>Green</strong> = more affordable (lower $/km). <strong>Red</strong> = less affordable (higher $/km).
+            <strong>Green</strong> = affordable · <strong>Red</strong> = expensive
         </div>
     </div>
 
     <script>
+        // Toggle controls panel
+        document.getElementById('controls-toggle').addEventListener('click', () => {
+            const panel = document.getElementById('controls-panel');
+            panel.classList.toggle('hidden');
+        });
+
         const CONFIG = {
             width: window.innerWidth,
             height: window.innerHeight,
@@ -520,14 +541,11 @@
         function haversineDistance(lat1, lon1, lat2, lon2) {
             const R = 6371;
             const toRad = x => x * Math.PI / 180;
-
             const dLat = toRad(lat2 - lat1);
             const dLon = toRad(lon2 - lon1);
-
             const a = Math.sin(dLat / 2)**2 +
                     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
                     Math.sin(dLon / 2)**2;
-
             return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         }
 
@@ -535,18 +553,14 @@
             if (!houses || houses.length === 0) {
                 return { median: null, avgPsf: null, corr: null };
             }
-
             const prices = houses.map(h => h.properties.SALE_PRICE)
                 .filter(p => p && !isNaN(p))
                 .map(p => typeof p === 'string' ? parseFloat(p.replace(/[^0-9.-]/g, '')) : p)
                 .filter(p => p > 0);
-
             if (prices.length === 0) return { median: null, avgPsf: null, corr: null };
-
             prices.sort((a, b) => a - b);
             const median = prices[Math.floor(prices.length / 2)];
             const avgPsf = d3.mean(prices);
-
             let corr = null;
             const distances = houses.map(h => h.properties.dist_km).filter(d => d);
             if (distances.length > 10) {
@@ -564,7 +578,6 @@
                     corr = num / Math.sqrt(denomX * denomY);
                 }
             }
-
             return { median, avgPsf, corr };
         }
 
@@ -591,13 +604,9 @@
                     return `<div class="legend-scale-item" style="background: ${color};"></div>`;
                 })
                 .join('');
-            
             d3.select("#legend-scale").html(html);
-            
-            // Update labels with actual dollar amounts
             const { min, max } = state.scoreStats;
             const mid = (min + max) / 2;
-            
             d3.select("#legend-min").text('$' + Math.round(min).toLocaleString());
             d3.select("#legend-mid").text('$' + Math.round(mid).toLocaleString());
             d3.select("#legend-max").text('$' + Math.round(max).toLocaleString());
@@ -614,22 +623,17 @@
                 updateStats([]);
                 return;
             }
-
             const [sLon, sLat] = station.geometry.coordinates;
-
             const nearby = state.allHouses.filter(h => {
                 const p = h.properties;
                 const [hLon, hLat] = h.geometry.coordinates;
                 const dist = haversineDistance(sLat, sLon, hLat, hLon);
                 p.dist_km = dist;
-
                 if (dist > maxDistKm) return false;
                 if (selectedYear && p.SALE_YEAR !== selectedYear) return false;
                 return state.visibleBoroughs.has(p.borough || "Unknown");
             });
-
             updateStats(nearby);
-
             const scores = nearby.map(h => {
                 const price = typeof h.properties.SALE_PRICE === 'string'
                     ? parseFloat(h.properties.SALE_PRICE.replace(/[^0-9.-]/g, ''))
@@ -637,26 +641,18 @@
                 const dist = h.properties.dist_km || 0.01;
                 return computeAffordabilityScore(price, dist);
             });
-
             if (scores.length === 0) return;
-
             const sortedScores = scores.slice().sort((a, b) => a - b);
             const p5 = d3.quantile(sortedScores, 0.05) || 0;
             const p95 = d3.quantile(sortedScores, 0.95) || sortedScores[sortedScores.length - 1];
-
             state.scoreStats = { min: p5, max: p95 };
-
-            // Update legend with new price range
             updateLegendScale();
-
             const normalizeScore = (rawScore) => {
                 const clamped = Math.max(p5, Math.min(p95, rawScore));
                 return (clamped - p5) / (p95 - p5);
             };
-
             const houseLayer = d3.select(".house-layer");
             houseLayer.selectAll("circle").remove();
-
             houseLayer.selectAll("circle")
                 .data(nearby)
                 .join("circle")
@@ -679,22 +675,19 @@
                         .attr("r", Math.max(CONFIG.houseRadiusBase / state.currentZoom + 2, 3))
                         .attr("stroke", "white")
                         .attr("stroke-width", 1.5);
-
                     const p = d.properties;
                     const price = typeof p.SALE_PRICE === 'string'
                         ? parseFloat(p.SALE_PRICE.replace(/[^0-9.-]/g, ''))
                         : p.SALE_PRICE;
                     const dist = p.dist_km || 0.01;
                     const rawScore = computeAffordabilityScore(price, dist);
-                    const normalizedScore = normalizeScore(rawScore);
-                    
                     tooltip.style("display", "block")
                         .html(`
                             <strong>${p.address}</strong><br>
-                            <strong>Sale Price:</strong> $${Number(price).toLocaleString()}<br>
-                            <strong>Sale Date:</strong> ${p.SALE_DATE}<br>
-                            <strong>Distance:</strong> ${dist.toFixed(2)} km<br>
-                            <strong>Score ($/km):</strong> $${Math.round(rawScore).toLocaleString()}
+                            <strong>Price:</strong> $${Number(price).toLocaleString()}<br>
+                            <strong>Date:</strong> ${p.SALE_DATE}<br>
+                            <strong>Dist:</strong> ${dist.toFixed(2)} km<br>
+                            <strong>Score:</strong> $${Math.round(rawScore).toLocaleString()}/km
                         `)
                         .style("left", (event.pageX + 12) + "px")
                         .style("top", (event.pageY + 12) + "px");
@@ -716,7 +709,7 @@
                             if (n > 1) {
                                 console.warn(`Retrying ${url}, attempts left: ${n - 1}`);
                                 setTimeout(() => {
-                                    attemptFetch(n - 1, currentDelay * 2); 
+                                    attemptFetch(n - 1, currentDelay * 2);
                                 }, currentDelay);
                             } else {
                                 reject(err);
@@ -732,37 +725,23 @@
                 if (callback) callback();
                 return;
             }
-
-            // List of your split GeoJSON files
             const houseFiles = [
                 "data/pages/New-York-City-Houses-1.geojson",
                 "data/pages/New-York-City-Houses-2.geojson",
                 "data/pages/New-York-City-Houses-3.geojson"
             ];
-
-            // Fetch all files in parallel using retry logic
             Promise.all(houseFiles.map(f => fetchWithRetry(f, 3, 500)))
                 .then(houseChunks => {
-                    // Combine all features into a single array
                     const combinedFeatures = houseChunks.flatMap(chunk => chunk.features || []);
-
-                    // Create a single GeoJSON-like object
-                    const housesData = {
-                        type: "FeatureCollection",
-                        features: combinedFeatures
-                    };
-
-                    // Store in state like before
+                    const housesData = { type: "FeatureCollection", features: combinedFeatures };
                     state.allHouses = housesData.features;
                     state.housesLoaded = true;
-
                     if (callback) callback();
                 })
                 .catch(err => {
                     console.error("Error loading houses after retries:", err);
                 });
         }
-
 
         function updateVisibility() {
             d3.selectAll(".subway-station")
@@ -783,7 +762,6 @@
             updateVisibility();
             updateLegendScale();
 
-            // Draw borough polygons
             g.append("g").selectAll("path")
                 .data(boroughs.features)
                 .join("path")
@@ -793,9 +771,7 @@
                 .style("fill", "rgba(255, 255, 255, 0.05)")
                 .style("stroke", "#334255");
 
-            // Draw subway stations
             const stationLayer = g.append("g").attr("class", "station-layer");
-
             stationLayer.selectAll("circle")
                 .data(subways.features)
                 .join("circle")
@@ -804,10 +780,9 @@
                 .attr("cy", d => projection(d.geometry.coordinates)[1])
                 .attr("r", CONFIG.stationRadiusBase)
                 .attr("fill", d => boroughColors[d.properties.borough] || boroughColors['Unknown'])
-                .on("mouseover", function(event, d) {                    
+                .on("mouseover", function(event, d) {
                     d3.select(this).attr("data-prev-radius", d3.select(this).attr("r"));
                     d3.select(this).attr("r", 4);
-
                     tooltip.style("display", "block")
                         .html(`
                             <strong>${d.properties.name}</strong><br>
@@ -817,7 +792,6 @@
                         .style("left", (event.pageX + 12) + "px")
                         .style("top", (event.pageY + 12) + "px");
                 })
-
                 .on("mouseout", function(event, d) {
                     if (state.selectedStationId != d.properties.stop_id) {
                         const prev = d3.select(this).attr("data-prev-radius");
@@ -825,17 +799,14 @@
                     }
                     tooltip.style("display", "none");
                 })
-
                 .on("click", function(event, d) {
                     tooltip.style("display", "none");
-                    state.selectedStationId = d.properties.stop_id
+                    state.selectedStationId = d.properties.stop_id;
                     state.selectedStation = d;
                     const clickedCircle = this;
                     const coords = projection(d.geometry.coordinates);
-
                     d3.select("#stat-station-name").text(d.properties.name);
                     d3.select("#stat-station-lines").text(d.properties.lines || "-");
-
                     svg.transition()
                         .duration(750)
                         .call(
@@ -845,18 +816,15 @@
                                 .scale(Math.max(state.currentZoom, 4))
                                 .translate(-coords[0], -coords[1])
                         )
-                        .on("end",function() {
+                        .on("end", function() {
                             const circle = d3.select(clickedCircle);
-
                             d3.selectAll(".subway-station").style("stroke", "white");
                             const base = boroughColors[d.properties.borough] || boroughColors["Unknown"];
                             const darker = d3.color(base).darker(3);
                             circle.style("stroke", darker);
-                            circle .attr("r", 4);
-
+                            circle.attr("r", 4);
                             const [x, y] = projection(d.geometry.coordinates);
                             const transformed = state.currentTransform.apply([x, y]);
-
                             tooltip
                                 .style("display", "block")
                                 .html(`
@@ -867,7 +835,6 @@
                                 .style("left", (transformed[0] + 12) + "px")
                                 .style("top", (transformed[1] + 12) + "px");
                         });
-
                     ensureHousesLoaded(() => {
                         showHousesForStation(d, state.maxDistance, state.year);
                     });
@@ -875,7 +842,6 @@
 
             g.append("g").attr("class", "house-layer");
 
-            // Borough labels
             g.append("g").selectAll("text")
                 .data(boroughs.features)
                 .join("text")
@@ -884,7 +850,6 @@
                 .attr("dy", "0.35em")
                 .text(d => d.properties.BoroName || "");
 
-            // Borough filters
             d3.selectAll('.checkbox-label input').on('change', function() {
                 const borough = this.value;
                 if (this.checked) {
@@ -898,17 +863,15 @@
                 }
             });
 
-            // Year slider
             d3.select("#year-slider").on("input", function() {
                 state.year = +this.value;
                 d3.select("#year-display").text(state.year);
-                d3.select("#time-info").text(state.year + " • Showing data from this year");
+                d3.select("#time-info").text(state.year + " • All data");
                 if (state.selectedStation && state.housesLoaded) {
                     showHousesForStation(state.selectedStation, state.maxDistance, state.year);
                 }
             });
 
-            // Distance slider
             d3.select("#distance-slider").on("input", function() {
                 state.maxDistance = +this.value;
                 d3.select("#distance-display").text(state.maxDistance.toFixed(1));
@@ -917,32 +880,25 @@
                 }
             });
 
-            // Station search
             d3.select("#station-search").on("input", function() {
                 const searchTerm = this.value.toLowerCase();
                 d3.selectAll(".subway-station").classed("highlight", false);
-
                 if (searchTerm.length === 0) {
                     tooltip.style("display", "none");
                     return;
                 }
-
                 const matches = state.allStations.filter(d =>
                     d.properties.name.toLowerCase().includes(searchTerm)
                 );
-
                 if (matches.length === 0) {
                     tooltip.style("display", "none");
                     return;
                 }
-
                 state.selectedStation = matches[0];
                 d3.selectAll(".subway-station")
                     .filter(d => d.properties.stop_id === state.selectedStation.properties.stop_id)
                     .classed("highlight", true);
-
                 const [x, y] = projection(state.selectedStation.geometry.coordinates);
-
                 svg.transition().duration(750)
                     .call(
                         zoom.transform,
@@ -952,10 +908,9 @@
                             .translate(-x, -y)
                     )
                     .on("end", () => {
-                         ensureHousesLoaded(() => {
+                        ensureHousesLoaded(() => {
                             showHousesForStation(state.selectedStation, state.maxDistance, state.year);
                         });
-
                         const p = state.selectedStation.properties;
                         tooltip.style("display", "block")
                             .html(`
@@ -968,7 +923,6 @@
                     });
             });
 
-            // Buttons
             d3.select("#btn-show-all").on("click", () => {
                 d3.selectAll('.checkbox-label input').property("checked", true).dispatch("change");
             });
@@ -979,8 +933,8 @@
                     const selectedCircle = d3.selectAll(".subway-station")
                         .filter(d => d.properties.stop_id === state.selectedStation.properties.stop_id);
                     selectedCircle.attr("r", Math.max(CONFIG.stationRadiusBase / state.currentZoom, 1))
-                    .style("stroke", "white")
-                    tooltip.style("display", "none")
+                        .style("stroke", "white");
+                    tooltip.style("display", "none");
                 }
                 state.selectedStation = null;
                 state.selectedStationId = null;
@@ -992,7 +946,7 @@
             d3.select("#btn-download").on("click", () => {
                 const csv = [
                     ["Station Name", "Borough", "Stop ID", "Latitude", "Longitude"],
-                    state.allStations.map(d => [
+                    ...state.allStations.map(d => [
                         '"' + d.properties.name + '"',
                         d.properties.borough,
                         d.properties.stop_id,
@@ -1000,7 +954,6 @@
                         d.geometry.coordinates[0]
                     ])
                 ].map(row => row.join(",")).join("\n");
-                
                 const blob = new Blob([csv], { type: "text/csv" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
@@ -1008,12 +961,12 @@
                 a.download = "nyc_subway_stations.csv";
                 a.click();
             });
-            
 
         }).catch(error => console.error("Error loading data:", error));
+
         window.addEventListener("load", () => {
-                ensureHousesLoaded();
-            });
+            ensureHousesLoaded();
+        });
     </script>
 </body>
 </html>
